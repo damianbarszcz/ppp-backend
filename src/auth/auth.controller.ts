@@ -3,10 +3,14 @@ import { Response } from 'express';
 import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from './local-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
+import {UserService} from "../user/user.service";
 
 @Controller('auth')
 export class AuthController{
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly userService: UserService
+    ) {}
 
     @Post('register')
     async createUser(
@@ -24,8 +28,6 @@ export class AuthController{
     @UseGuards(LocalAuthGuard)
     @Post('login')
     async login(@Request() req, @Res() res: Response) : Promise<any> {
-        console.log("✔️ Logowanie udane, generuję token...");
-
         const { access_token } = await this.authService.login(req.user);
 
         res.cookie('access_token', access_token, {
@@ -35,8 +37,6 @@ export class AuthController{
             maxAge: 60 * 60 * 1000,
         });
 
-        console.log("✔️ Token JWT wygenerowany:", access_token);
-
         return res.status(HttpStatus.OK).json({
             success: true,
             message: "Logowanie zakończone sukcesem.",
@@ -45,19 +45,32 @@ export class AuthController{
 
     @Post('logout')
     async logout(@Res() res: Response) : Promise<any> {
-        res.clearCookie('access_token');
-        return res.status(HttpStatus.OK);
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+        });
+
+        return res.status(HttpStatus.OK).json({
+            success: true,
+            message: "Wylogowano pomyślnie.",
+        });
     }
 
     @UseGuards(AuthGuard('jwt'))
     @Get('me')
     async getProfile(@Request() req) {
-        console.log("🔍 Sprawdzam użytkownika w /auth/me:", req.user);
-
         if (!req.user) {
             return { user: null };
         }
+        const user  = await this.userService.findUserByEmail(req.user.email);
 
-        return { user: req.user };
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                account_type: user.account_type
+            }
+        };
     }
 }
