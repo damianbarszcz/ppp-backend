@@ -30,7 +30,9 @@ export class AuthService{
         const user = this.userRepository.create({ email, password: hashedPassword, account_type });
         await this.userRepository.save(user);
 
-        const profile = this.profileRepository.create({ name, surname, user });
+        const user_avatar_color = this.generateRandomHexColor();
+
+        const profile = this.profileRepository.create({ name, surname, user, user_avatar_color });
         await this.profileRepository.save(profile);
     }
 
@@ -55,5 +57,9 @@ export class AuthService{
             throw new UnauthorizedException(errorMessage);
         }
         return user;
+    }
+
+    generateRandomHexColor() : string {
+        return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
     }
 }

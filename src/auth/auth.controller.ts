@@ -63,7 +63,10 @@ export class AuthController{
             user: {
                 id: user.id,
                 email: user.email,
-                account_type: user.account_type
+                account_type: user.account_type,
+                user_avatar_color: user.profile?.user_avatar_color,
+                name: user.profile?.name,
+                surname: user.profile?.surname,
             }
         };
     }

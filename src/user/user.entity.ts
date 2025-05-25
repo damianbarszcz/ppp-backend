@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn,  OneToOne, JoinColumn  } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn,  OneToOne, JoinColumn,    CreateDateColumn, UpdateDateColumn,  } from 'typeorm';
 import {UserProfile} from "./user-profile.entity";
 
 @Entity('users')
@@ -18,4 +18,10 @@ export class User {
     @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })
     @JoinColumn()
     profile: UserProfile;
+
+    @CreateDateColumn({ type: 'timestamp with time zone' })
+    created_at: Date;
+
+    @UpdateDateColumn({ type: 'timestamp with time zone' })
+    updated_at: Date;
 }
