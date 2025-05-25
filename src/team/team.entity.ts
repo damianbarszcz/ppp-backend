@@ -36,7 +36,7 @@ export class Team {
     @UpdateDateColumn({ type: 'timestamp with time zone' })
     updated_at: Date;
 
-    @OneToOne(() => TeamDetails, teamDetails => teamDetails.team)
+    @OneToOne(() => TeamDetails, details => details.team, { cascade: true })
     team_details: TeamDetails;
 
     @BeforeInsert()

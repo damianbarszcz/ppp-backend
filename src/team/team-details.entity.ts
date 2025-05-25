@@ -14,7 +14,7 @@ export class TeamDetails {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @OneToOne(() => Team)
+    @OneToOne(() => Team, team => team.team_details)
     @JoinColumn()
     team: Team;
 

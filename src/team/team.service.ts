@@ -19,7 +19,7 @@ export class TeamService {
 
         const team_avatar_color = this.generateRandomHexColor();
 
-        const teamDetails = this.teamDetailsRepository.create({tags,description,team_avatar_color });
+        const teamDetails = this.teamDetailsRepository.create({tags,description,team_avatar_color,team: team });
         await this.teamDetailsRepository.save(teamDetails);
     }
 
