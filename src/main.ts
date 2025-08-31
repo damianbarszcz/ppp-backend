@@ -7,11 +7,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
 
-  app.enableCors({
-    origin: 'http://localhost:3000',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-  });
+    app.enableCors({
+        origin: [
+            'http://localhost:3000',
+            'http://3.73.37.13:3000',
+        ],
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        credentials: true,
+    });
   app.setGlobalPrefix('api')
 
   await app.listen(8000);
@@ -25,5 +28,4 @@ async function bootstrap() {
   Logger.log(`Server is running on: ${await app.getUrl()}`);
   Logger.log(`Available Routes:\n${availableRoutes.join('\n')}`);
 }
-
 bootstrap();
