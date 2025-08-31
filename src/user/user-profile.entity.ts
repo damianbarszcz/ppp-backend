@@ -13,10 +13,13 @@ export class UserProfile {
     surname: string;
 
     @Column()
+    username: string;
+
+    @Column()
     user_avatar_color: string;
 
-    @Column({ nullable: true })
-    phone: string;
+    @Column({ type: 'text', nullable: true })
+    biogram: string;
 
     @OneToOne(() => User, (user) => user.profile)
     user: User;

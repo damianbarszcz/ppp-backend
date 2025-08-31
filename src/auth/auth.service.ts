@@ -25,14 +25,16 @@ export class AuthService{
         }
 
         const saltRounds = 10
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashed_password : string = await bcrypt.hash(password, saltRounds);
+        const password_length : number = password.length
 
-        const user = this.userRepository.create({ email, password: hashedPassword, account_type });
+        const user = this.userRepository.create({ email, password: hashed_password, account_type, password_length });
         await this.userRepository.save(user);
 
         const user_avatar_color = this.generateRandomHexColor();
+        const username = await this.generateUniqueUsername(name, surname, email);
 
-        const profile = this.profileRepository.create({ name, surname, user, user_avatar_color });
+        const profile = this.profileRepository.create({ name, surname, user, user_avatar_color,username});
         await this.profileRepository.save(profile);
     }
 
@@ -61,5 +63,36 @@ export class AuthService{
 
     generateRandomHexColor() : string {
         return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+    }
+
+    async generateUniqueUsername(name: string, surname: string, email: string): Promise<string> {
+        const baseUsername = `${name}${surname}`.toLowerCase().replace(/\s+/g, '');
+
+        const exists = await this.checkUsernameExists(baseUsername);
+        if (!exists) {
+            return baseUsername;
+        }
+
+        let counter = 1;
+        let username = `${baseUsername}${counter}`;
+
+        while (await this.checkUsernameExists(username)) {
+            counter++;
+            username = `${baseUsername}${counter}`;
+
+            if (counter > 9999) {
+                username = `${baseUsername}${Math.random().toString(36).substring(2, 7)}`;
+                break;
+            }
+        }
+
+        return username;
+    }
+
+    async checkUsernameExists(username: string): Promise<boolean> {
+        const count = await this.profileRepository.count({
+            where: { username }
+        });
+        return count > 0;
     }
 }

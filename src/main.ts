@@ -22,7 +22,7 @@ async function bootstrap() {
       .filter((layer) => layer.route)
       .map((layer) => `${Object.keys(layer.route.methods).join(', ').toUpperCase()} ${layer.route.path}`);
 
-  Logger.log(`🚀 Server is running on: ${await app.getUrl()}`);
+  Logger.log(`Server is running on: ${await app.getUrl()}`);
   Logger.log(`Available Routes:\n${availableRoutes.join('\n')}`);
 }
 

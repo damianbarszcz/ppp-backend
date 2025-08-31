@@ -37,7 +37,10 @@ export class AuthController{
             maxAge: 60 * 60 * 1000,
         });
 
-        return res.status(HttpStatus.OK).json({ success: true });
+        return res.status(HttpStatus.OK).json({
+            success: true,
+            account_type: req.user.account_type
+        });
     }
 
     @Post('logout')
@@ -64,9 +67,14 @@ export class AuthController{
                 id: user.id,
                 email: user.email,
                 account_type: user.account_type,
-                user_avatar_color: user.profile?.user_avatar_color,
-                name: user.profile?.name,
-                surname: user.profile?.surname,
+                password_length:user.password_length,
+                profile:{
+                    user_avatar_color: user.profile?.user_avatar_color,
+                    biogram: user.profile?.biogram,
+                    name: user.profile?.name,
+                    surname: user.profile?.surname,
+                    username: user.profile?.username,
+                }
             }
         };
     }

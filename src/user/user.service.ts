@@ -16,4 +16,15 @@ export class UserService {
             relations: ['profile'],
         });
     }
+
+    async findByUsername(username: string): Promise<User | undefined> {
+        return this.userRepository
+            .createQueryBuilder('user')
+            .leftJoinAndSelect('user.profile', 'profile')
+            .leftJoinAndSelect('user.followers', 'followers')
+            .leftJoinAndSelect('user.articles', 'articles')
+            .where('profile.username = :username', { username })
+            .orderBy('articles.created_at', 'DESC')
+            .getOne();
+    }
 }
