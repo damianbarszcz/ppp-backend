@@ -33,8 +33,11 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     private channelUsers = new Map<string, ChannelUser>();
     private userHeartbeats = new Map<string, NodeJS.Timeout>();
+    private socketInstances = new Map<string, Socket>(); // Przechowujemy referencje do socketów
 
     constructor(private readonly channelService: ChannelService) {
+        console.log('ChannelGateway initialized with CORS:', process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://3.73.37.13:3000']);
+
         setInterval(() => {
             this.cleanupInactiveUsers();
         }, 30000);
@@ -42,10 +45,14 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     handleConnection(client: Socket) {
         console.log(`Client connected: ${client.id}`);
+        // Przechowaj referencję do socket
+        this.socketInstances.set(client.id, client);
     }
 
     handleDisconnect(client: Socket) {
         console.log(`Client disconnected: ${client.id}`);
+        // Usuń referencję do socket
+        this.socketInstances.delete(client.id);
         this.handleUserLeave(client);
     }
 
@@ -196,6 +203,9 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                     this.userHeartbeats.delete(client.id);
                 }
 
+                // Usuń referencję do socket
+                this.socketInstances.delete(client.id);
+
                 // Opuść room
                 client.leave(`team-${user.teamId}`);
 
@@ -229,15 +239,9 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                 if (timeSinceLastHeartbeat > 60000) {
                     console.log(`User ${user.userId} timed out, removing from channel`);
 
-                    // Znajdź socket przez namespace zamiast this.server.sockets.sockets
-                    if (this.server) {
-                        const channelNamespace = this.server.of('/channel');
-                        if (channelNamespace?.sockets) {
-                            const socket = channelNamespace.sockets.get(socketId);
-                            if (socket) {
-                                this.handleUserLeave(socket);
-                            }
-                        }
+                    const socket = this.socketInstances.get(socketId);
+                    if (socket) {
+                        this.handleUserLeave(socket);
                     }
                 }
             }
@@ -258,53 +262,30 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
         });
 
         usersToRemove.forEach(socketId => {
-            if (this.server) {
-                const channelNamespace = this.server.of('/channel');
-                if (channelNamespace?.sockets) {
-                    const socket = channelNamespace.sockets.get(socketId);
-                    if (socket) {
-                        this.handleUserLeave(socket);
-                    }
-                }
+            const socket = this.socketInstances.get(socketId);
+            if (socket) {
+                this.handleUserLeave(socket);
             }
         });
     }
 
     private findUserSocket(userId: number, teamId: number): Socket | null {
-        // Sprawdź czy server jest zainicjalizowany
-        if (!this.server) {
-            console.error('Server not initialized in findUserSocket');
-            return null;
-        }
-
         // Znajdź socketId na podstawie userId i teamId
-        let targetSocketId: string | null = null;
         for (const [socketId, user] of this.channelUsers.entries()) {
             if (user.userId === userId && user.teamId === teamId) {
-                targetSocketId = socketId;
-                break;
+                // Pobierz socket z naszej mapy instancji
+                const socket = this.socketInstances.get(socketId);
+                if (socket) {
+                    return socket;
+                } else {
+                    console.log(`Socket ${socketId} not found in instances map, removing user`);
+                    this.channelUsers.delete(socketId);
+                    return null;
+                }
             }
         }
 
-        if (!targetSocketId) {
-            console.log(`Socket not found for user ${userId} in team ${teamId}`);
-            return null;
-        }
-
-        // Sprawdź czy socket namespace jest dostępny
-        const channelNamespace = this.server.of('/channel');
-        if (!channelNamespace || !channelNamespace.sockets) {
-            console.error('Channel namespace not initialized');
-            return null;
-        }
-
-        const socket = channelNamespace.sockets.get(targetSocketId);
-        if (!socket) {
-            console.log(`Socket ${targetSocketId} not found in namespace`);
-            // Usuń nieistniejący socket z mapy
-            this.channelUsers.delete(targetSocketId);
-        }
-
-        return socket || null;
+        console.log(`User ${userId} not found in team ${teamId}`);
+        return null;
     }
 }
