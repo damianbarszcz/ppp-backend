@@ -118,16 +118,14 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) {
         const user = this.channelUsers.get(client.id);
         if (user) {
-            console.log(`Handling offer from user ${user.userId} to user ${data.targetUserId}`);
+            console.log(`Received offer data:`, JSON.stringify(data.offer)); // DODAJ TO
+
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
             if (targetSocket) {
                 targetSocket.emit('offer', {
                     fromUserId: user.userId,
                     offer: data.offer
                 });
-                console.log(`Offer sent from ${user.userId} to ${data.targetUserId}`);
-            } else {
-                console.log(`Target socket not found for user ${data.targetUserId}`);
             }
         }
     }
