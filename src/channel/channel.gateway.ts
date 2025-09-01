@@ -22,7 +22,7 @@ interface ChannelUser {
 @Injectable()
 @WebSocketGateway({
     cors: {
-        origin: ['http://localhost:3000', 'http://3.73.37.13:3000'],
+        origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://3.73.37.13:3000'],
         credentials: true,
     },
     namespace: '/channel'
@@ -109,7 +109,6 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) {
         const user = this.channelUsers.get(client.id);
         if (user) {
-            // Znajdź socket docelowego użytkownika
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
             if (targetSocket) {
                 targetSocket.emit('offer', {
@@ -151,6 +150,20 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                     candidate: data.candidate
                 });
             }
+        }
+    }
+
+    @SubscribeMessage('user-stream-state-changed')
+    handleStreamStateChanged(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { hasVideo: boolean; hasAudio: boolean }
+    ) {
+        const user = this.channelUsers.get(client.id);
+        if (user) {
+            client.to(`team-${user.teamId}`).emit('user-stream-state-changed', {
+                userId: user.userId,
+                ...data
+            });
         }
     }
 
@@ -205,7 +218,14 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                 // Jeśli brak heartbeat przez 60 sekund, usuń użytkownika
                 if (timeSinceLastHeartbeat > 60000) {
                     console.log(`User ${user.userId} timed out, removing from channel`);
-                    this.handleUserLeave(this.server.sockets.sockets.get(socketId));
+
+                    // POPRAWKA: Dodaj sprawdzenie czy server i socket istnieją
+                    if (this.server?.sockets?.sockets) {
+                        const socket = this.server.sockets.sockets.get(socketId);
+                        if (socket) {
+                            this.handleUserLeave(socket);
+                        }
+                    }
                 }
             }
         }, 10000);
@@ -225,17 +245,27 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
         });
 
         usersToRemove.forEach(socketId => {
-            const socket = this.server.sockets.sockets.get(socketId);
-            if (socket) {
-                this.handleUserLeave(socket);
+            // POPRAWKA: Dodaj sprawdzenie czy server i socket istnieją
+            if (this.server?.sockets?.sockets) {
+                const socket = this.server.sockets.sockets.get(socketId);
+                if (socket) {
+                    this.handleUserLeave(socket);
+                }
             }
         });
     }
 
     private findUserSocket(userId: number, teamId: number): Socket | null {
+        // POPRAWKA: Sprawdź czy server i sockets istnieją
+        if (!this.server?.sockets?.sockets) {
+            console.error('Server sockets not initialized in findUserSocket');
+            return null;
+        }
+
         for (const [socketId, user] of this.channelUsers.entries()) {
             if (user.userId === userId && user.teamId === teamId) {
-                return this.server.sockets.sockets.get(socketId) || null;
+                const socket = this.server.sockets.sockets.get(socketId);
+                return socket || null;
             }
         }
         return null;
