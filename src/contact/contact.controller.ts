@@ -66,7 +66,6 @@ export class ContactController {
                     field: error.property,
                     message: Object.values(error.constraints || {})[0] || 'Błąd walidacji'
                 }));
-
                 return res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
                     success: false,
                     message: 'Błędy walidacji',
