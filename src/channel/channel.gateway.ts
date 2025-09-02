@@ -22,7 +22,7 @@ interface ChannelUser {
 @Injectable()
 @WebSocketGateway({
     cors: {
-        origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://3.73.37.13:3000'],
+        origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://18.184.15.158/'],
         credentials: true,
     },
     namespace: '/channel'
@@ -33,25 +33,19 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     private channelUsers = new Map<string, ChannelUser>();
     private userHeartbeats = new Map<string, NodeJS.Timeout>();
-    private socketInstances = new Map<string, Socket>(); // Przechowujemy referencje do socketów
+    private socketInstances = new Map<string, Socket>();
 
     constructor(private readonly channelService: ChannelService) {
-        console.log('ChannelGateway initialized with CORS:', process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://3.73.37.13:3000']);
-
         setInterval(() => {
             this.cleanupInactiveUsers();
         }, 30000);
     }
 
     handleConnection(client: Socket) {
-        console.log(`Client connected: ${client.id}`);
-        // Przechowaj referencję do socket
         this.socketInstances.set(client.id, client);
     }
 
     handleDisconnect(client: Socket) {
-        console.log(`Client disconnected: ${client.id}`);
-        // Usuń referencję do socket
         this.socketInstances.delete(client.id);
         this.handleUserLeave(client);
     }
@@ -84,14 +78,9 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
             const participants = await this.channelService.getActiveParticipants(teamId);
             this.server.to(`team-${teamId}`).emit('participants-updated', participants);
-
-            // Ustaw heartbeat
             this.setupHeartbeat(client.id);
 
-            console.log(`User ${userId} joined team ${teamId}`);
-
         } catch (error) {
-            console.error('Error joining channel:', error);
             client.emit('error', { message: 'Failed to join channel' });
         }
     }
@@ -110,7 +99,6 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
     }
 
-    // WebRTC Signaling
     @SubscribeMessage('offer')
     handleOffer(
         @ConnectedSocket() client: Socket,
@@ -118,16 +106,12 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) {
         const user = this.channelUsers.get(client.id);
         if (user) {
-            console.log(`Handling offer from user ${user.userId} to user ${data.targetUserId}`);
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
             if (targetSocket) {
                 targetSocket.emit('offer', {
                     fromUserId: user.userId,
                     offer: data.offer
                 });
-                console.log(`Offer sent from ${user.userId} to ${data.targetUserId}`);
-            } else {
-                console.log(`Target socket not found for user ${data.targetUserId}`);
             }
         }
     }
@@ -139,16 +123,12 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) {
         const user = this.channelUsers.get(client.id);
         if (user) {
-            console.log(`Handling answer from user ${user.userId} to user ${data.targetUserId}`);
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
             if (targetSocket) {
                 targetSocket.emit('answer', {
                     fromUserId: user.userId,
                     answer: data.answer
                 });
-                console.log(`Answer sent from ${user.userId} to ${data.targetUserId}`);
-            } else {
-                console.log(`Target socket not found for user ${data.targetUserId}`);
             }
         }
     }
@@ -177,7 +157,6 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) {
         const user = this.channelUsers.get(client.id);
         if (user) {
-            console.log(`User ${user.userId} stream state changed:`, data);
             client.to(`team-${user.teamId}`).emit('user-stream-state-changed', {
                 userId: user.userId,
                 ...data
@@ -189,33 +168,20 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
         const user = this.channelUsers.get(client.id);
         if (user) {
             try {
-                console.log(`User ${user.userId} leaving team ${user.teamId}`);
-
-                // Usuń z kanału w bazie danych
                 await this.channelService.leaveChannel(user.teamId, user.userId);
-
-                // Usuń z mapy
                 this.channelUsers.delete(client.id);
 
-                // Wyczyść heartbeat
                 if (this.userHeartbeats.has(client.id)) {
                     clearInterval(this.userHeartbeats.get(client.id));
                     this.userHeartbeats.delete(client.id);
                 }
-
-                // Usuń referencję do socket
                 this.socketInstances.delete(client.id);
-
-                // Opuść room
                 client.leave(`team-${user.teamId}`);
-
-                // Powiadom innych o opuszczeniu
                 client.to(`team-${user.teamId}`).emit('user-left', {
                     userId: user.userId,
                     timestamp: new Date()
                 });
 
-                // Zaktualizuj listę uczestników
                 const participants = await this.channelService.getActiveParticipants(user.teamId);
                 this.server.to(`team-${user.teamId}`).emit('participants-updated', participants);
 
@@ -237,8 +203,6 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                 const timeSinceLastHeartbeat = now.getTime() - user.lastHeartbeat.getTime();
 
                 if (timeSinceLastHeartbeat > 60000) {
-                    console.log(`User ${user.userId} timed out, removing from channel`);
-
                     const socket = this.socketInstances.get(socketId);
                     if (socket) {
                         this.handleUserLeave(socket);
@@ -270,22 +234,17 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
 
     private findUserSocket(userId: number, teamId: number): Socket | null {
-        // Znajdź socketId na podstawie userId i teamId
         for (const [socketId, user] of this.channelUsers.entries()) {
             if (user.userId === userId && user.teamId === teamId) {
-                // Pobierz socket z naszej mapy instancji
                 const socket = this.socketInstances.get(socketId);
                 if (socket) {
                     return socket;
                 } else {
-                    console.log(`Socket ${socketId} not found in instances map, removing user`);
                     this.channelUsers.delete(socketId);
                     return null;
                 }
             }
         }
-
-        console.log(`User ${userId} not found in team ${teamId}`);
         return null;
     }
 }

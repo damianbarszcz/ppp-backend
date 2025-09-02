@@ -13,6 +13,7 @@ import { PaymentModule } from "./payment/payment.module";
 import { MentorProfileModule } from "./mentor-profile/mentor-profile.module";
 import { ChannelModule } from "./channel/channel.module";
 import { NotificationModule } from "./notification/notification.module";
+import {ProspectorProfileModule} from "./prospector-profile/prospector-profile.module";
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { NotificationModule } from "./notification/notification.module";
     PaymentModule,
     MentorProfileModule,
     ChannelModule,
-    NotificationModule
+    NotificationModule,
+    ProspectorProfileModule
   ],
 })
 export class AppModule {}
