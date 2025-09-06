@@ -82,7 +82,7 @@ export class AuthController{
             path: '/',
             domain: 'localhost',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false,
             sameSite: 'lax',
         });
 
