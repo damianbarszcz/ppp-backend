@@ -56,7 +56,6 @@ export class AuthController{
                 secure: false,
                 sameSite: 'lax',
                 path: '/',
-                domain: 'localhost',
                 maxAge: 60 * 60 * 1000,
             });
             res.status(HttpStatus.OK).json({
@@ -80,7 +79,6 @@ export class AuthController{
     public async logout(@Res() res: Response) : Promise<any> {
         res.clearCookie('access_token', {
             path: '/',
-            domain: 'localhost',
             httpOnly: true,
             secure: false,
             sameSite: 'lax',
