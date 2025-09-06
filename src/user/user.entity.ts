@@ -25,10 +25,6 @@ export class User {
     @JoinColumn()
     profile: UserProfile;
 
-    @OneToOne(() => MentorProfile, (mentor_profile) => mentor_profile.mentor_profile, { cascade: true })
-    @JoinColumn()
-    mentor_profile: MentorProfile;
-
     @OneToMany(() => Follower, follower => follower.followedUser)
     followers: Follower[];
 

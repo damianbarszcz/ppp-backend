@@ -1,4 +1,4 @@
-import {ConflictException, Injectable, UnauthorizedException} from '@nestjs/common';
+import {Injectable, UnauthorizedException} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
@@ -18,12 +18,7 @@ export class AuthService{
         private readonly jwtService: JwtService,
     ) {}
 
-    async createUser(name: string, surname:string, email: string, password: string, account_type: string) : Promise<void>  {
-        const existingUser = await this.userService.findUserByEmail(email);
-        if (existingUser) {
-            throw new ConflictException('Użytkownik z tym adresem email już istnieje.');
-        }
-
+    public async createUser(name: string, surname:string, email: string, password: string, account_type: string) : Promise<void>  {
         const saltRounds = 10
         const hashed_password : string = await bcrypt.hash(password, saltRounds);
         const password_length : number = password.length
@@ -32,47 +27,43 @@ export class AuthService{
         await this.userRepository.save(user);
 
         const user_avatar_color = this.generateRandomHexColor();
-        const username = await this.generateUniqueUsername(name, surname, email);
+        const username = await this.generateUniqueUsername(name, surname);
 
         const profile = this.profileRepository.create({ name, surname, user, user_avatar_color,username});
         await this.profileRepository.save(profile);
     }
 
-    async login(user: any) {
+    public async login(user: User) {
         const payload = { email: user.email, sub: user.id };
+
         const access_token = this.jwtService.sign(payload, {
-            expiresIn: '1h',
+            secret: process.env.JWT_SECRET,
         });
 
         return { access_token };
     }
 
-    async validateUser(email: string, password: string): Promise<User | null> {
+    public async validateUser(email: string, password: string): Promise<User | null> {
         const user = await this.userService.findUserByEmail(email);
-        const isPasswordValid = await bcrypt.compare(password, user.password);
         const errorMessage = "Nie znaleźliśmy konta pasującego do podanego adresu e-mail i hasła. Sprawdź swój adres e-mail i hasło i spróbuj ponownie.";
 
         if (!user) {
             throw new UnauthorizedException(errorMessage);
         }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             throw new UnauthorizedException(errorMessage);
         }
         return user;
     }
 
-    generateRandomHexColor() : string {
-        return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
-    }
-
-    async generateUniqueUsername(name: string, surname: string, email: string): Promise<string> {
+    private async generateUniqueUsername(name: string, surname: string): Promise<string> {
         const baseUsername = `${name}${surname}`.toLowerCase().replace(/\s+/g, '');
 
         const exists = await this.checkUsernameExists(baseUsername);
         if (!exists) {
             return baseUsername;
         }
-
         let counter = 1;
         let username = `${baseUsername}${counter}`;
 
@@ -89,10 +80,14 @@ export class AuthService{
         return username;
     }
 
-    async checkUsernameExists(username: string): Promise<boolean> {
+    private async checkUsernameExists(username: string): Promise<boolean> {
         const count = await this.profileRepository.count({
             where: { username }
         });
         return count > 0;
+    }
+
+    private generateRandomHexColor() : string {
+        return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
     }
 }

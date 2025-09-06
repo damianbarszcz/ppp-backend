@@ -17,10 +17,6 @@ export class MentorProfile {
     @Column()
     mentor_id: number;
 
-    @ManyToOne(() => User, user => user.mentor_profile)
-    @JoinColumn({ name: 'mentor_id' })
-    mentor_profile: User;
-
     @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;
 

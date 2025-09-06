@@ -3,12 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Article } from './article.entity';
 import { ArticleDto } from "../dto/article/article.dto";
+import {NotificationService} from "../notification/notification.service";
+import {FollowerService} from "../follower/follower.service";
 
 @Injectable()
 export class ArticleService {
     constructor(
         @InjectRepository(Article)
         private articleRepository: Repository<Article>,
+        private notificationService: NotificationService,
+        private followerService: FollowerService,
     ) {}
 
     public async getMentorArticles(mentor_id: number): Promise<Article[]> {
@@ -34,7 +38,27 @@ export class ArticleService {
             published_at: new Date()
         });
 
-        return await this.articleRepository.save(article);
+        const savedArticle = await this.articleRepository.save(article);
+        await this.notifyFollowersAboutNewArticle(user_id, title);
+
+        return savedArticle;
+    }
+
+    private async notifyFollowersAboutNewArticle(mentorId: number, articleTitle: string): Promise<void> {
+        try {
+            const followers = await this.followerService.getMentorFollowers(mentorId);
+            const message = `opublikował nowy artykuł: "${articleTitle}"`;
+            const notificationPromises = followers.map(follower =>
+                this.notificationService.createNotification(
+                    follower.user_id,
+                    mentorId,
+                    message
+                )
+            );
+            await Promise.all(notificationPromises);
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     private async checkTitleExists(user_id: number, title: string): Promise<void> {
@@ -48,10 +72,7 @@ export class ArticleService {
         if (existingArticle) {
             throw new ConflictException({
                 success: false,
-                errors: [{
-                    field: 'title',
-                    message: 'Artykuł o takim tytule już istnieje.'
-                }]
+                errors: [{field: 'title', message: 'Artykuł o takim tytule już istnieje.'}]
             });
         }
     }

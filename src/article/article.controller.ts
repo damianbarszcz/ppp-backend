@@ -1,5 +1,5 @@
 import {
-    Body, ConflictException,
+    Body,
     Controller,
     Get,
     HttpStatus,
@@ -38,12 +38,11 @@ export class ArticleController {
             if (errors.length > 0) {
                 const formattedErrors = errors.map(error => ({
                     field: error.property,
-                    message: Object.values(error.constraints || {})[0] || 'Błąd walidacji'
+                    message: Object.values(error.constraints || {})[0]
                 }));
 
                 return res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
                     success: false,
-                    message: 'Błędy walidacji',
                     errors: formattedErrors
                 });
             }
@@ -56,16 +55,7 @@ export class ArticleController {
             });
 
         } catch (error) {
-            if (error instanceof ConflictException) {
-                const conflictResponse = error.getResponse() as any;
-                return res.status(HttpStatus.UNPROCESSABLE_ENTITY).json(conflictResponse);
-            }
-
-            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Wystąpił błąd podczas tworzenia artykułu',
-                errors: []
-            });
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false });
         }
     }
 }

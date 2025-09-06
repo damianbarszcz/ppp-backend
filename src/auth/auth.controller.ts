@@ -1,9 +1,22 @@
-import {Controller, Post, Body, Request, Res, HttpStatus, UseGuards, Get} from '@nestjs/common';
+import {
+    Controller,
+    Post,
+    Body,
+    Request,
+    Res,
+    HttpStatus,
+    UseGuards,
+    Get,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from "./auth.service";
-import { LocalAuthGuard } from './local-auth.guard';
 import {UserService} from "../user/user.service";
+import {plainToInstance} from "class-transformer";
+import {LoginDto} from "../dto/auth/login.dto";
+import {validate} from "class-validator";
+import {RegisterDto} from "../dto/auth/register.dto";
 
 @Controller('auth')
 export class AuthController{
@@ -12,43 +25,65 @@ export class AuthController{
         private readonly userService: UserService
     ) {}
 
-    @Post('register')
-    async createUser(
-        @Body() body: { name:string, surname:string, email: string; password: string, account_type: string },
-        @Res() res: Response
-    ) : Promise<any>  {
-        await this.authService.createUser(body.name, body.surname, body.email, body.password, body.account_type);
-
-        return res.status(HttpStatus.CREATED).json({
-            success: true,
-            message: 'Twoje konto zostało poprawnie utworzone. Możesz się już zalogować.',
-        });
-    }
-
-    @UseGuards(LocalAuthGuard)
     @Post('login')
-    async login(@Request() req, @Res() res: Response) : Promise<any> {
-        const { access_token } = await this.authService.login(req.user);
+    public async login(@Body() body: any, @Res() res: Response): Promise<void> {
+        try {
+            const dto = plainToInstance(LoginDto, body);
+            const errors = await validate(dto);
 
-        res.cookie('access_token', access_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 60 * 60 * 1000,
-        });
+            if (errors.length > 0) {
+                const formattedErrors = errors.map(error => ({
+                    field: error.property,
+                    message: Object.values(error.constraints || {})[0]
+                }));
 
-        return res.status(HttpStatus.OK).json({
-            success: true,
-            account_type: req.user.account_type
-        });
+                res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
+                    success: false,
+                    errors: formattedErrors
+                });
+                return;
+            }
+
+            const user = await this.authService.validateUser(dto.email, dto.password);
+            const { access_token } = await this.authService.login(user);
+
+            res.clearCookie('access_token', {
+                path: '/',
+                domain: 'localhost'
+            });
+            res.cookie('access_token', access_token, {
+                httpOnly: true,
+                secure: false,
+                sameSite: 'lax',
+                path: '/',
+                domain: 'localhost',
+                maxAge: 60 * 60 * 1000,
+            });
+            res.status(HttpStatus.OK).json({
+                success: true,
+                account_type: user.account_type,
+            });
+
+        } catch (error: any) {
+            if (error instanceof UnauthorizedException) {
+                res.status(HttpStatus.UNAUTHORIZED).json({
+                    success: false,
+                    message: error.message
+                });
+            } else {
+                res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({success: false});
+            }
+        }
     }
 
     @Post('logout')
-    async logout(@Res() res: Response) : Promise<any> {
+    public async logout(@Res() res: Response) : Promise<any> {
         res.clearCookie('access_token', {
+            path: '/',
+            domain: 'localhost',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: 'lax',
         });
 
         return res.status(HttpStatus.OK).json({ success: true });
@@ -56,7 +91,7 @@ export class AuthController{
 
     @UseGuards(AuthGuard('jwt'))
     @Get('me')
-    async getProfile(@Request() req) {
+    public async getProfile(@Request() req) {
         if (!req.user) {
             return { user: null };
         }
@@ -77,5 +112,107 @@ export class AuthController{
                 }
             }
         };
+    }
+
+    @Post('register')
+    public async createUser(@Body() body: any, @Res() res: Response): Promise<void> {
+        try {
+            const dto = plainToInstance(RegisterDto, body);
+            const errors = await validate(dto);
+
+            if (errors.length > 0) {
+                const formattedErrors = errors.map(error => ({
+                    field: error.property,
+                    message: Object.values(error.constraints || {})[0]
+                }));
+
+                res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
+                    success: false,
+                    errors: formattedErrors
+                });
+                return;
+            }
+            await this.authService.createUser(dto.name, dto.surname, dto.email, dto.password, dto.account_type);
+
+            res.status(HttpStatus.CREATED).json({
+                success: true,
+                message: 'Twoje konto zostało poprawnie utworzone. Możesz się już zalogować.',
+            });
+        }
+        catch (error: any) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({success: false});
+        }
+    }
+
+    @Post('register-validate-step1')
+    public async reigsterValidateStep1(@Body() body: any, @Res() res: Response): Promise<void> {
+        try {
+            const step1Data = {
+                name: body.name,
+                surname: body.surname,
+                email: body.email,
+                password: body.password
+            };
+
+            const dto = plainToInstance(RegisterDto, step1Data);
+            const errors = await validate(dto, {
+                skipMissingProperties: true
+            });
+
+            if (errors.length > 0) {
+                const formattedErrors = errors.map(error => ({
+                    field: error.property,
+                    message: Object.values(error.constraints || {})[0]
+                }));
+
+                res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
+                    success: false,
+                    errors: formattedErrors
+                });
+                return;
+            }
+
+            const existingUser = await this.userService.findUserByEmail(body.email);
+            if (existingUser) {
+                res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
+                    success: false,
+                    errors: [{ field: 'email', message: 'Ten adres email jest już zajęty.' }]
+                });
+                return;
+            }
+            res.status(HttpStatus.OK).json({ success: true });
+
+        } catch (error) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false });
+        }
+    }
+
+    @Post('register-validate-step2')
+    public async registerValidateStep2(@Body() body: any, @Res() res: Response): Promise<void> {
+        try {
+            const step2Data = { account_type: body.account_type };
+
+            const dto = plainToInstance(RegisterDto, step2Data);
+            const errors = await validate(dto, {
+                skipMissingProperties: true
+            });
+
+            if (errors.length > 0) {
+                const formattedErrors = errors.map(error => ({
+                    field: error.property,
+                    message: Object.values(error.constraints || {})[0]
+                }));
+
+                res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
+                    success: false,
+                    errors: formattedErrors
+                });
+                return;
+            }
+            res.status(HttpStatus.OK).json({success: true});
+
+        } catch (error) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false });
+        }
     }
 }
