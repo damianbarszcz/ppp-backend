@@ -18,7 +18,6 @@ export class ChannelService {
         if (participantIds.length === 0) {
             return { users: [], count: 0 };
         }
-
         const users = await this.userRepository.find({
             where: { id: In(participantIds) },
             relations: ['profile']
@@ -31,13 +30,11 @@ export class ChannelService {
         if (!this.activeParticipants.has(teamId)) {
             this.activeParticipants.set(teamId, new Set());
         }
-
         this.activeParticipants.get(teamId)!.add(userId);
     }
 
     public async leaveChannel(teamId: number, userId: number): Promise<void> {
         const participants = this.activeParticipants.get(teamId);
-
         if (participants) {
             participants.delete(userId);
             if (participants.size === 0) {

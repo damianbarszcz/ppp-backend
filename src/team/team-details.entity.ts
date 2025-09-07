@@ -18,11 +18,8 @@ export class TeamDetails {
     @JoinColumn()
     team: Team;
 
-    @Column({ type: 'varchar', length: 128 })
+    @Column({ type: 'varchar', length: 255 })
     description: string;
-
-    @Column('simple-array')
-    tags: string[];
 
     @Column({ type: 'varchar', length: 128 })
     team_avatar_color: string;

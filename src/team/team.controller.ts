@@ -1,6 +1,9 @@
 import {Controller, Post, Body, Res, HttpStatus, Get, Param, Delete} from '@nestjs/common';
 import { Response } from 'express';
 import { TeamService } from "./team.service";
+import {CreateTeamDto} from "../dto/team/team.dto";
+import {validate} from "class-validator";
+import {plainToInstance} from "class-transformer";
 
 @Controller('team')
 export class TeamController{
@@ -9,117 +12,80 @@ export class TeamController{
     ) {}
 
     @Post('create')
-    async createTeam(
-        @Body() body: {
-            title: string,
-            description: string,
-            tags?: string[],
-            user_id: number,
-            members: number[]
-        },
-        @Res() res: Response
-    ) : Promise<any>  {
+    public async createTeam(@Body() body: any, @Res() res: Response): Promise<any> {
         try {
-            await this.teamService.createTeam(
-                body.title,
-                body.description,
-                body.tags || [],
-                body.user_id,
-                body.members || []
-            );
+            const dto = plainToInstance(CreateTeamDto, body);
+            const errors = await validate(dto);
 
-            return res.status(HttpStatus.CREATED).json({
-                success: true,
-                message: 'Zespół został utworzony pomyślnie',
-            });
+            if (errors.length > 0) {
+                const formattedErrors = errors.map(error => ({
+                    field: error.property,
+                    message: Object.values(error.constraints || {})[0]
+                }));
+
+                return res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({success: false, errors: formattedErrors});
+            }
+
+            const existingTeam = await this.teamService.checkTeamExists(dto.title.trim(), dto.user_id);
+            if (existingTeam) {
+                return res.status(HttpStatus.CONFLICT).json({
+                    success: false,
+                    errors: [{field: 'title', message: 'Zespół o tej nazwie już istnieje'}]
+                });
+            }
+            await this.teamService.createTeam(dto.title.trim(), dto.description.trim(), dto.user_id, dto.members || []);
+
+            return res.status(HttpStatus.CREATED).json({success: true, message: 'Zespół został utworzony pomyślnie',});
+
         } catch (error) {
-            return res.status(HttpStatus.BAD_REQUEST).json({
-                success: false,
-                message: 'Błąd podczas tworzenia zespołu',
-                error: error.message
-            });
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({success: false});
         }
     }
 
-
     @Get('user/:userId')
-    async getTeamsByUser(@Param('userId') userId: string, @Res() res: Response): Promise<any> {
+    public async getTeamsByUser(@Param('userId') userId: string, @Res() res: Response): Promise<any> {
         const teams = await this.teamService.getTeamsByUserId(Number(userId));
 
-        return res.status(HttpStatus.OK).json({
-            success: true,
-            data: teams,
-        });
+        return res.status(HttpStatus.OK).json({success: true, data: teams});
     }
 
     @Get(':slug')
-    async getTeamBySlug(@Param('slug') slug: string, @Res() res: Response): Promise<any> {
+    public async getTeamBySlug(@Param('slug') slug: string, @Res() res: Response): Promise<any> {
         const team = await this.teamService.getTeamBySlug(slug);
-
         if (!team) {
             return res.status(HttpStatus.NOT_FOUND).json({
-                success: false,
-                message: 'Team not found',
+                success: false
             });
         }
-
-        return res.status(HttpStatus.OK).json({
-            success: true,
-            data: team,
-        });
+        return res.status(HttpStatus.OK).json({success: true, data: team});
     }
 
     @Get('invitations/:userId')
-    async getTeamInvitations(@Param('userId') userId: string, @Res() res: Response): Promise<any> {
+    public async getTeamInvitations(@Param('userId') userId: string, @Res() res: Response): Promise<any> {
         const invitations = await this.teamService.getTeamInvitationsForUser(Number(userId));
 
-        return res.status(HttpStatus.OK).json({
-            success: true,
-            data: invitations,
-        });
+        return res.status(HttpStatus.OK).json({success: true, data: invitations});
     }
 
     @Post('invitations/:invitationId/accept')
-    async acceptTeamInvitation(
-        @Param('invitationId') invitationId: string,
-        @Body() body: { user_id: number },
-        @Res() res: Response
-    ): Promise<any> {
+    public async acceptTeamInvitation(@Param('invitationId') invitationId: string, @Body() body: { user_id: number }, @Res() res: Response): Promise<any> {
         try {
             await this.teamService.acceptTeamInvitation(Number(invitationId), body.user_id);
+            return res.status(HttpStatus.OK).json({success: true});
 
-            return res.status(HttpStatus.OK).json({
-                success: true,
-                message: 'Zaproszenie zostało zaakceptowane',
-            });
         } catch (error) {
-            return res.status(HttpStatus.BAD_REQUEST).json({
-                success: false,
-                message: 'Błąd podczas akceptacji zaproszenia',
-                error: error.message
-            });
+            return res.status(HttpStatus.BAD_REQUEST).json({success: false, error: error.message});
         }
     }
 
     @Delete('invitations/:invitationId/reject')
-    async rejectTeamInvitation(
-        @Param('invitationId') invitationId: string,
-        @Body() body: { user_id: number },
-        @Res() res: Response
-    ): Promise<any> {
+    async rejectTeamInvitation(@Param('invitationId') invitationId: string, @Body() body: { user_id: number }, @Res() res: Response): Promise<any> {
         try {
             await this.teamService.rejectTeamInvitation(Number(invitationId), body.user_id);
+            return res.status(HttpStatus.OK).json({success: true});
 
-            return res.status(HttpStatus.OK).json({
-                success: true,
-                message: 'Zaproszenie zostało odrzucone',
-            });
         } catch (error) {
-            return res.status(HttpStatus.BAD_REQUEST).json({
-                success: false,
-                message: 'Błąd podczas odrzucania zaproszenia',
-                error: error.message
-            });
+            return res.status(HttpStatus.BAD_REQUEST).json({success: false, error: error.message});
         }
     }
 }

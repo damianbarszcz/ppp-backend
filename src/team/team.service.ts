@@ -18,36 +18,24 @@ export class TeamService {
         private notificationService: NotificationService,
     ) {}
 
-    async createTeam(
-        title: string,
-        description: string,
-        tags: string[],
-        user_id: number,
-        members: number[] = []
-    ): Promise<void> {
-        const team = this.teamRepository.create({ title, user_id });
+    public async createTeam(title: string, description: string, user_id: number, members: number[] = []): Promise<void> {
+        const team = this.teamRepository.create({title: title, user_id});
         const savedTeam = await this.teamRepository.save(team);
-
         const team_avatar_color = this.generateRandomHexColor();
         const teamDetails = this.teamDetailsRepository.create({
-            tags,
             description,
             team_avatar_color,
             team: savedTeam
         });
-        await this.teamDetailsRepository.save(teamDetails);
 
+        await this.teamDetailsRepository.save(teamDetails);
         if (members && members.length > 0) {
             await this.createTeamInvitations(savedTeam.id, user_id, members);
             await this.sendTeamNotifications(user_id, members, title);
         }
     }
 
-    private async createTeamInvitations(
-        teamId: number,
-        senderId: number,
-        memberIds: number[]
-    ): Promise<void> {
+    private async createTeamInvitations(teamId: number, senderId: number, memberIds: number[]): Promise<void> {
         for (const memberId of memberIds) {
             if (memberId !== senderId) {
                 try {
@@ -58,7 +46,6 @@ export class TeamService {
                             status: 'pending'
                         }
                     });
-
                     if (!existingInvitation) {
                         const invitation = this.teamInvitationRepository.create({
                             team_id: teamId,
@@ -76,30 +63,21 @@ export class TeamService {
         }
     }
 
-    private async sendTeamNotifications(
-        senderId: number,
-        memberIds: number[],
-        teamTitle: string
-    ): Promise<void> {
+    private async sendTeamNotifications(senderId: number, memberIds: number[], teamTitle: string): Promise<void> {
         for (const memberId of memberIds) {
             if (memberId !== senderId) {
                 const message = `zaprosił Cię do zespołu "${teamTitle}"`;
 
                 try {
-                    await this.notificationService.createNotification(
-                        memberId,
-                        senderId,
-                        message
-                    );
+                    await this.notificationService.createNotification(memberId, senderId, message);
                 } catch (error) {
                     console.error(`Błąd wysyłania powiadomienia do użytkownika ${memberId}:`, error);
-                    // Kontynuuj wysyłanie do pozostałych użytkowników
                 }
             }
         }
     }
 
-    async getTeamsByUserId(userId: number): Promise<Team[]> {
+    public  async getTeamsByUserId(userId: number): Promise<Team[]> {
         const ownedTeams = await this.teamRepository.find({
             where: { user_id: userId },
             relations: ['team_details', 'creator'],
@@ -119,23 +97,19 @@ export class TeamService {
         const uniqueTeams = allTeams.filter((team, index, self) =>
             index === self.findIndex(t => t.id === team.id)
         );
-
         return uniqueTeams.sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
     }
 
-    async getTeamBySlug(slug: string): Promise<Team | null> {
+    public async getTeamBySlug(slug: string): Promise<Team | null> {
         return this.teamRepository.findOne({
             where: { slug },
             relations: ['team_details', 'creator'],
         });
     }
 
-    async getTeamInvitationsForUser(userId: number): Promise<{
-        sentInvitations: TeamInvitation[],
-        receivedInvitations: TeamInvitation[]
-    }> {
+    public async getTeamInvitationsForUser(userId: number): Promise<{ sentInvitations: TeamInvitation[], receivedInvitations: TeamInvitation[] }> {
         const sentInvitations = await this.teamInvitationRepository.find({
             where: {
                 inviter_user_id: userId,
@@ -153,11 +127,10 @@ export class TeamService {
             relations: ['team', 'team.team_details', 'inviter', 'inviter.profile'],
             order: { created_at: 'DESC' },
         });
-
         return { sentInvitations, receivedInvitations };
     }
 
-    async acceptTeamInvitation(invitationId: number, userId: number): Promise<void> {
+    public async acceptTeamInvitation(invitationId: number, userId: number): Promise<void> {
         const invitation = await this.teamInvitationRepository.findOne({
             where: {
                 id: invitationId,
@@ -169,12 +142,11 @@ export class TeamService {
         if (!invitation) {
             throw new Error('Zaproszenie nie zostało znalezione');
         }
-
         invitation.status = 'accepted';
         await this.teamInvitationRepository.save(invitation);
     }
 
-    async rejectTeamInvitation(invitationId: number, userId: number): Promise<void> {
+    public async rejectTeamInvitation(invitationId: number, userId: number): Promise<void> {
         const invitation = await this.teamInvitationRepository.findOne({
             where: {
                 id: invitationId,
@@ -190,7 +162,17 @@ export class TeamService {
         await this.teamInvitationRepository.remove(invitation);
     }
 
-    generateRandomHexColor(): string {
+    private generateRandomHexColor(): string {
         return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+    }
+
+    public async checkTeamExists(title: string, userId: number): Promise<boolean> {
+        const existingTeam = await this.teamRepository.findOne({
+            where: {
+                title: title,
+                user_id: userId
+            }
+        });
+        return !!existingTeam;
     }
 }

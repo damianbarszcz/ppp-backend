@@ -44,19 +44,14 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     handleConnection(client: Socket) {
         this.socketInstances.set(client.id, client);
     }
-
     handleDisconnect(client: Socket) {
         this.socketInstances.delete(client.id);
         this.handleUserLeave(client);
     }
 
     @SubscribeMessage('join-channel')
-    async handleJoinChannel(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: { teamId: number; userId: number }
-    ) {
+    async handleJoinChannel(@ConnectedSocket() client: Socket, @MessageBody() data: { teamId: number; userId: number }) {
         const { teamId, userId } = data;
-
         try {
             await this.channelService.joinChannel(teamId, userId);
 
@@ -117,10 +112,7 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
 
     @SubscribeMessage('answer')
-    handleAnswer(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: { targetUserId: number; answer: any }
-    ) {
+    handleAnswer(@ConnectedSocket() client: Socket, @MessageBody() data: { targetUserId: number; answer: any }) {
         const user = this.channelUsers.get(client.id);
         if (user) {
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
@@ -134,10 +126,7 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
 
     @SubscribeMessage('ice-candidate')
-    handleIceCandidate(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: { targetUserId: number; candidate: any }
-    ) {
+    handleIceCandidate(@ConnectedSocket() client: Socket, @MessageBody() data: { targetUserId: number; candidate: any }) {
         const user = this.channelUsers.get(client.id);
         if (user) {
             const targetSocket = this.findUserSocket(data.targetUserId, user.teamId);
@@ -151,10 +140,7 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
 
     @SubscribeMessage('user-stream-state-changed')
-    handleStreamStateChanged(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: { hasVideo: boolean; hasAudio: boolean }
-    ) {
+    handleStreamStateChanged(@ConnectedSocket() client: Socket, @MessageBody() data: { hasVideo: boolean; hasAudio: boolean }) {
         const user = this.channelUsers.get(client.id);
         if (user) {
             client.to(`team-${user.teamId}`).emit('user-stream-state-changed', {
@@ -224,7 +210,6 @@ export class ChannelGateway implements OnGatewayConnection, OnGatewayDisconnect 
                 usersToRemove.push(socketId);
             }
         });
-
         usersToRemove.forEach(socketId => {
             const socket = this.socketInstances.get(socketId);
             if (socket) {
