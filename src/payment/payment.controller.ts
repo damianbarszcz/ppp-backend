@@ -34,4 +34,21 @@ export class PaymentController {
             console.error('Błąd podczas pobierania statusu subskrypcji:', error);
         }
     }
+
+    @Get('mentor/status/:userId/:mentorId')
+    async getUserSubscriptionMentorStatus(
+        @Param('userId', ParseIntPipe) user_id: number,
+        @Param('mentorId', ParseIntPipe) mentor_id: number
+    ) {
+        try {
+            const subscription_data = await this.paymentService.getUserSubscriptionMentorStatus(user_id, mentor_id);
+
+            return {
+                success: true,
+                data: subscription_data
+            };
+        } catch (error) {
+            console.error('Błąd podczas pobierania statusu subskrypcji:', error);
+        }
+    }
 }

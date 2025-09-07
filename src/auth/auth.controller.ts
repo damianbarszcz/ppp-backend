@@ -103,10 +103,11 @@ export class AuthController{
                 password_length:user.password_length,
                 profile:{
                     user_avatar_color: user.profile?.user_avatar_color,
+                    username: user.profile?.username,
                     biogram: user.profile?.biogram,
                     name: user.profile?.name,
                     surname: user.profile?.surname,
-                    username: user.profile?.username,
+                    mentor_subscribe_price: user.profile?.mentor_subscribe_price,
                 }
             }
         };

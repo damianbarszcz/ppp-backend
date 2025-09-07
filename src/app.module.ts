@@ -14,6 +14,7 @@ import { MentorProfileModule } from "./mentor-profile/mentor-profile.module";
 import { ChannelModule } from "./channel/channel.module";
 import { NotificationModule } from "./notification/notification.module";
 import {ProspectorProfileModule} from "./prospector-profile/prospector-profile.module";
+import {SearchModule} from "./search/search.module";
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import {ProspectorProfileModule} from "./prospector-profile/prospector-profile.m
     MentorProfileModule,
     ChannelModule,
     NotificationModule,
-    ProspectorProfileModule
+    ProspectorProfileModule,
+    SearchModule
   ],
 })
 export class AppModule {}

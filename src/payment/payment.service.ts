@@ -55,4 +55,42 @@ export class PaymentService {
             throw error;
         }
     }
+
+    async getUserSubscriptionMentorStatus(user_id: number, mentor_id: number) {
+        try {
+            const mentorSubscription = await this.userPaymentRepository.findOne({
+                where: {
+                    user_id: user_id,
+                    mentor_id: mentor_id,
+                    subscription_type: 'mentor_subscription'
+                },
+                order: { created_at: 'DESC' }
+            });
+
+            let hasActiveSubscription = false;
+            if (mentorSubscription) {
+                const now = new Date();
+                const expirationDate = new Date(mentorSubscription.current_period_end);
+                hasActiveSubscription = expirationDate > now;
+            }
+
+            const daysRemaining = mentorSubscription
+                ? Math.ceil((new Date(mentorSubscription.current_period_end).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+
+            return {
+                hasActiveSubscription,
+                status: mentorSubscription?.status || null,
+                amount: mentorSubscription?.amount || null,
+                currency: mentorSubscription?.currency || null,
+                expiresAt: mentorSubscription?.current_period_end || null,
+                daysRemaining: Math.max(0, daysRemaining || 0),
+                mentorSubscription,
+                mentor_id: mentor_id
+            };
+
+        } catch (error) {
+            throw error;
+        }
+    }
 }

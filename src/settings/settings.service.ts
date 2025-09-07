@@ -111,6 +111,34 @@ export class SettingsService {
         }
     }
 
+    async updateMentorSubscribePrice(mentor_subscribe_price: number, user_id: number): Promise<User> {
+        try {
+            const user = await this.userRepository.findOne({
+                where: { id: user_id },
+                relations: ['profile']
+            });
+
+            if (!user) {
+                throw new NotFoundException('Użytkownik nie został znaleziony');
+            }
+
+            if (!user.profile) {
+                throw new NotFoundException('Profil użytkownika nie został znaleziony');
+            }
+
+            user.profile.mentor_subscribe_price = mentor_subscribe_price;
+            user.profile.updated_at = new Date();
+            await this.profileRepository.save(user.profile);
+
+            user.updated_at = new Date();
+            await this.userRepository.save(user);
+
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
     async checkUsernameExists(username: string, excludeUserId?: number): Promise<boolean> {
         try {

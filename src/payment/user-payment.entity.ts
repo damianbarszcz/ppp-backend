@@ -12,6 +12,9 @@ export class UserPayment {
     @Column()
     user_id: number;
 
+    @Column({nullable: true})
+    mentor_id: number;
+
     @Column()
     price_id: string;
 

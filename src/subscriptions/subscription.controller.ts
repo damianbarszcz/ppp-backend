@@ -15,20 +15,20 @@ export class SubscriptionController {
         private readonly subscriptionService: SubscriptionService,
     ) {}
 
-    @Post('create-checkout-session')
-    async createCheckoutSession(
+    @Post('user-subscribe-session')
+    async mentorSubscribeSession(
         @Body() body: {
             mentor_id: number,
             user_id: number,
-            price_id: string,
+            price_value: number,
             mentor_username: string
         },
         @Res() res: Response
     ): Promise<any> {
-        const session = await this.subscriptionService.createCheckoutSession(
+        const session = await this.subscriptionService.subscribeMentorByUser(
             body.mentor_id,
             body.user_id,
-            body.price_id,
+            body.price_value,
             body.mentor_username
         );
 
@@ -43,9 +43,7 @@ export class SubscriptionController {
         @Body() body: { user_id: number },
         @Res() res: Response
     ): Promise<any> {
-        const session = await this.subscriptionService.subscribeMentorPlus(
-            body.user_id,
-        );
+        const session = await this.subscriptionService.subscribeMentorPlus(body.user_id);
 
         return res.status(HttpStatus.OK).json({
             success: true,

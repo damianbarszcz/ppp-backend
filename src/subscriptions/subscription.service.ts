@@ -17,7 +17,9 @@ export class SubscriptionService {
         });
     }
 
-    async createCheckoutSession(mentorId: number, userId: number, priceId: string, mentorUsername: string)   {
+    public async subscribeMentorByUser(mentorId: number, userId: number, price_value: number, mentorUsername: string)   {
+        const priceId = await this.createOrGetMentorPrice(mentorId, mentorUsername, price_value);
+
         return await this.stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -27,16 +29,17 @@ export class SubscriptionService {
                 },
             ],
             mode: 'subscription',
-            success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/member/mentor-finder?username=${mentorUsername}`,
+            success_url: `${process.env.FRONTEND_URL}/member/prospector/payment-process?session_id={CHECKOUT_SESSION_ID}&username=${mentorUsername}`,
+            cancel_url: `${process.env.FRONTEND_URL}/member/prospector/mentor-search?username=${mentorUsername}`,
             metadata: {
                 mentor_id: mentorId.toString(),
                 user_id: userId.toString(),
+                mentor_username: mentorUsername,
             },
         });
     }
 
-    async subscribeMentorPlus(user_id: number)    {
+    public async subscribeMentorPlus(user_id: number)    {
         return await this.stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -53,20 +56,27 @@ export class SubscriptionService {
         });
     }
 
-    async handleProcessPayment(session_id: string) : Promise<UserPayment> {
+    public async handleProcessPayment(session_id: string): Promise<UserPayment> {
         try {
-            const session  = await this.stripe.checkout.sessions.retrieve(session_id);
+            const session = await this.stripe.checkout.sessions.retrieve(session_id);
             const user_id: number = parseInt(session.metadata?.user_id);
-            const subscription  = await this.stripe.subscriptions.retrieve(session.subscription as string);
-            let subscription_type : string = 'mentor_plus';
-            const price_id : string = subscription.items.data[0].price.id;
+            const mentor_id: number | null = session.metadata?.mentor_id ? parseInt(session.metadata.mentor_id) : null;
+            const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
 
-            const existing_payment : UserPayment = await this.userPaymentRepository.findOne({
-                where: {
-                    user_id: user_id,
-                    status: 'active',
-                    subscription_type: subscription_type
-                },
+            const subscription_type: string = mentor_id ? 'mentor_subscription' : 'mentor_plus';
+            const price_id: string = subscription.items.data[0].price.id;
+
+            const whereCondition: any = {
+                user_id: user_id,
+                status: 'active',
+                subscription_type: subscription_type
+            };
+            if (mentor_id) {
+                whereCondition.mentor_id = mentor_id;
+            }
+
+            const existing_payment: UserPayment = await this.userPaymentRepository.findOne({
+                where: whereCondition,
                 order: { created_at: 'DESC' }
             });
 
@@ -80,6 +90,7 @@ export class SubscriptionService {
 
             const userPayment = this.userPaymentRepository.create({
                 user_id: user_id,
+                mentor_id: mentor_id,
                 price_id: price_id,
                 amount: subscription.items.data[0].price.unit_amount! / 100,
                 currency: subscription.items.data[0].price.currency,
@@ -94,6 +105,52 @@ export class SubscriptionService {
 
         } catch (error) {
             console.error('Błąd podczas obsługi pomyślnej płatności:', error);
+            throw error;
+        }
+    }
+
+    private async createOrGetMentorPrice(mentorId: number, mentorUsername: string, priceValue: number): Promise<string> {
+        try {
+            const existingProducts = await this.stripe.products.search({
+                query: `metadata['mentor_id']:'${mentorId}'`,
+            });
+
+            let productId: string;
+            const activeProduct = existingProducts.data.find(p => p.active === true);
+
+            if (activeProduct) {
+                productId = activeProduct.id;
+
+                const prices = await this.stripe.prices.list({
+                    product: productId,
+                    active: true,
+                });
+
+                const currentPrice = prices.data.find(p => p.unit_amount === Math.round(priceValue * 100));
+                if (currentPrice) {
+                    return currentPrice.id;
+                }
+            } else {
+                const product = await this.stripe.products.create({
+                    name: `mentor @${mentorUsername}`,
+                    description: `Miesięczny dostęp do treści premium mentora @${mentorUsername}`,
+                    metadata: {
+                        mentor_id: mentorId.toString(),
+                    },
+                });
+                productId = product.id;
+            }
+
+            const price = await this.stripe.prices.create({
+                unit_amount: Math.round(priceValue * 100),
+                currency: 'pln',
+                recurring: { interval: 'month' },
+                product: productId,
+            });
+
+            return price.id;
+        } catch (error) {
+            console.error('Błąd podczas tworzenia ceny w Stripe:', error);
             throw error;
         }
     }

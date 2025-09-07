@@ -13,6 +13,7 @@ import { PasswordDto } from "../dto/settings/password.dto";
 import { NameDto } from "../dto/settings/name.dto";
 import { BiogramDto } from "../dto/settings/biogram.dto";
 import { UsernameDto } from "../dto/settings/username.dto";
+import {MentorSubscribePriceDto} from "../dto/settings/mentor-subscribe-price.dto";
 
 @Controller('settings')
 export class SettingsController {
@@ -124,6 +125,27 @@ export class SettingsController {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message || 'Błąd podczas zmiany hasła'
+            });
+        }
+    }
+
+    @Put('personal-data/mentor-subscribe-price')
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+    async updateMentorSubscribePrice(
+        @Body() body: MentorSubscribePriceDto,
+        @Res() res: Response
+    ) {
+        try {
+            await this.settingsService.updateMentorSubscribePrice(body.mentor_subscribe_price, body.user_id);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: 'Cena twojej subskrybcji została zaaktualizowana',
+            });
+        } catch (error) {
+            return res.status(HttpStatus.BAD_REQUEST).json({
+                success: false,
+                message: error.message || 'Błąd podczas aktualizacji ceny subskrybcji'
             });
         }
     }

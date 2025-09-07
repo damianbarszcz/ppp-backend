@@ -18,6 +18,9 @@ export class UserProfile {
     @Column()
     user_avatar_color: string;
 
+    @Column({ type: 'float', nullable: true })
+    mentor_subscribe_price: number;
+
     @Column({ type: 'text', nullable: true })
     biogram: string;
 
