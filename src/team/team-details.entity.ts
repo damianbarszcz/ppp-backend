@@ -1,32 +1,32 @@
 import {
-    Entity,
-    Column,
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
-    UpdateDateColumn,
-    OneToOne,
-    JoinColumn,
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
-import {Team} from "./team.entity";
+import { Team } from './team.entity';
 
 @Entity('team_details')
 export class TeamDetails {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @OneToOne(() => Team, team => team.team_details)
-    @JoinColumn()
-    team: Team;
+  @OneToOne(() => Team, (team) => team.team_details)
+  @JoinColumn()
+  team: Team;
 
-    @Column({ type: 'varchar', length: 255 })
-    description: string;
+  @Column({ type: 'varchar', length: 255 })
+  description: string;
 
-    @Column({ type: 'varchar', length: 128 })
-    team_avatar_color: string;
+  @Column({ type: 'varchar', length: 128 })
+  team_avatar_color: string;
 
-    @CreateDateColumn({ type: 'timestamp with time zone' })
-    created_at: Date;
+  @CreateDateColumn({ type: 'timestamp with time zone' })
+  created_at: Date;
 
-    @UpdateDateColumn({ type: 'timestamp with time zone' })
-    updated_at: Date;
+  @UpdateDateColumn({ type: 'timestamp with time zone' })
+  updated_at: Date;
 }

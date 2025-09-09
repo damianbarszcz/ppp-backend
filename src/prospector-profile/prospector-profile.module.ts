@@ -5,9 +5,9 @@ import { ProspectorProfileService } from './prospector-profile.service';
 import { ProspectorProfileController } from './prospector-profile.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([ProspectorProfile])],
-    controllers: [ProspectorProfileController],
-    providers: [ProspectorProfileService],
-    exports: [ProspectorProfileService],
+  imports: [TypeOrmModule.forFeature([ProspectorProfile])],
+  controllers: [ProspectorProfileController],
+  providers: [ProspectorProfileService],
+  exports: [ProspectorProfileService],
 })
 export class ProspectorProfileModule {}

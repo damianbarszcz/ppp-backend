@@ -5,9 +5,9 @@ import { MentorProfileService } from './mentor-profile.service';
 import { MentorProfileController } from './mentor-profile.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([MentorProfile])],
-    providers: [MentorProfileService],
-    controllers: [MentorProfileController],
-    exports: [MentorProfileService],
+  imports: [TypeOrmModule.forFeature([MentorProfile])],
+  providers: [MentorProfileService],
+  controllers: [MentorProfileController],
+  exports: [MentorProfileService],
 })
 export class MentorProfileModule {}

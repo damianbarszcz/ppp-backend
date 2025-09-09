@@ -7,9 +7,9 @@ import { Message } from '../message/message.entity';
 import { ChannelGateway } from './channel.gateway';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([User, Message])],
-    controllers: [ChannelController],
-    providers: [ChannelService, ChannelGateway],
-    exports: [ChannelService],
+  imports: [TypeOrmModule.forFeature([User, Message])],
+  controllers: [ChannelController],
+  providers: [ChannelService, ChannelGateway],
+  exports: [ChannelService],
 })
 export class ChannelModule {}

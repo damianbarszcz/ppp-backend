@@ -1,119 +1,196 @@
-import {IsArray, IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength} from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  IsEmail,
+  MaxLength,
+  MinLength,
+  IsIn,
+  IsUrl,
+} from 'class-validator';
 
 export class ProspectorProfileDto {
-    @IsNumber({}, { message: 'ID użytkownika musi być liczbą.' })
-    @IsNotEmpty({ message: 'ID użytkownika jest wymagane.' })
-    user_id: number;
+  @IsNotEmpty({ message: 'ID użytkownika jest wymagane' })
+  @IsNumber({}, { message: 'ID użytkownika musi być liczbą' })
+  user_id: number;
 
-    @IsNotEmpty({ message: 'Pole "O mnie" jest wymagane' })
-    @IsString({ message: 'Pole "O mnie" musi być tekstem' })
-    @MaxLength(2000, { message: 'Opis "O mnie" nie może przekraczać 2000 znaków' })
-    about_me: string;
+  @IsNotEmpty({ message: 'Opis o sobie jest wymagany' })
+  @IsString({ message: 'Opis o sobie musi być tekstem' })
+  @MinLength(50, { message: 'Opis o sobie musi mieć minimum 50 znaków' })
+  @MaxLength(5000, { message: 'Opis o sobie nie może przekraczać 5000 znaków' })
+  about_me: string;
 
-    // === NOWE POLA Z KREATORA ===
+  // === PODSTAWOWE INFORMACJE ===
+  @IsOptional()
+  @IsEmail({}, { message: 'Nieprawidłowy format email' })
+  email?: string;
 
-    @IsOptional()
-    @IsArray()
-    collaboration_areas?: string[];
+  @IsOptional()
+  @IsString({ message: 'Specjalizacja musi być tekstem' })
+  @MaxLength(255, { message: 'Specjalizacja nie może przekraczać 255 znaków' })
+  specialization?: string;
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['daily', 'few-times-week', 'weekly', 'bi-weekly', 'monthly'])
-    meeting_frequency?: string;
+  @IsOptional()
+  @IsUrl({}, { message: 'URL portfolio musi być prawidłowy' })
+  @MaxLength(500, { message: 'URL portfolio nie może przekraczać 500 znaków' })
+  portfolio_url?: string;
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['30min', '1hour', '2hours', 'flexible'])
-    session_length?: string;
+  @IsOptional()
+  @IsUrl({}, { message: 'URL LinkedIn musi być prawidłowy' })
+  @MaxLength(500, { message: 'URL LinkedIn nie może przekraczać 500 znaków' })
+  linkedin_url?: string;
 
-    @IsOptional()
-    @IsArray()
-    time_preferences?: string[];
+  @IsOptional()
+  @IsString({ message: 'Lokalizacja musi być tekstem' })
+  @MaxLength(255, { message: 'Lokalizacja nie może przekraczać 255 znaków' })
+  location?: string;
 
-    @IsOptional()
-    @IsArray()
-    work_styles?: string[];
+  // === OBSZARY WSPÓŁPRACY ===
+  @IsOptional()
+  @IsArray({ message: 'Obszary współpracy muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy obszar współpracy musi być tekstem' })
+  collaboration_areas?: string[];
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['junior', 'mid', 'senior', 'expert', 'any'])
-    experience_level?: string;
+  // === PREFERENCJE KOMUNIKACYJNE ===
+  @IsOptional()
+  @IsString({ message: 'Częstotliwość spotkań musi być tekstem' })
+  @IsIn(['daily', 'few-times-week', 'weekly', 'bi-weekly', 'monthly'], {
+    message: 'Nieprawidłowa częstotliwość spotkań',
+  })
+  meeting_frequency?: string;
 
-    @IsOptional()
-    @IsArray()
-    industries?: string[];
+  @IsOptional()
+  @IsString({ message: 'Długość sesji musi być tekstem' })
+  @IsIn(['30min', '1hour', '2hours', 'flexible'], {
+    message: 'Nieprawidłowa długość sesji',
+  })
+  session_length?: string;
 
-    @IsOptional()
-    @IsArray()
-    required_skills?: string[];
+  @IsOptional()
+  @IsArray({ message: 'Preferencje czasowe muszą być tablicą' })
+  @IsString({
+    each: true,
+    message: 'Każda preferencja czasowa musi być tekstem',
+  })
+  time_preferences?: string[];
 
-    @IsOptional()
-    @IsArray()
-    languages?: string[];
+  @IsOptional()
+  @IsArray({ message: 'Style pracy muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy styl pracy musi być tekstem' })
+  work_styles?: string[];
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['long-term', 'short-term', 'one-time', 'startup', 'consulting'])
-    project_type?: string;
+  // === KOMPETENCJE I DOŚWIADCZENIE ===
+  @IsOptional()
+  @IsString({ message: 'Poziom doświadczenia musi być tekstem' })
+  @IsIn(['junior', 'mid', 'senior', 'expert', 'any'], {
+    message: 'Nieprawidłowy poziom doświadczenia',
+  })
+  experience_level?: string;
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['full-time', 'part-time', 'project-based', 'consultations', 'flexible'])
-    time_commitment?: string;
+  @IsOptional()
+  @IsArray({ message: 'Branże muszą być tablicą' })
+  @IsString({ each: true, message: 'Każda branża musi być tekstem' })
+  industries?: string[];
 
-    @IsOptional()
-    @IsArray()
-    work_modes?: string[];
+  @IsOptional()
+  @IsArray({ message: 'Wymagane umiejętności muszą być tablicą' })
+  @IsString({ each: true, message: 'Każda umiejętność musi być tekstem' })
+  required_skills?: string[];
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['up-to-50', '50-100', '100-200', '200-plus', 'negotiable'])
-    budget_range?: string;
+  @IsOptional()
+  @IsArray({ message: 'Języki muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy język musi być tekstem' })
+  languages?: string[];
 
-    @IsOptional()
-    @IsString()
-    location?: string;
+  // === FORMAT WSPÓŁPRACY ===
+  @IsOptional()
+  @IsString({ message: 'Typ projektu musi być tekstem' })
+  @IsIn(['long-term', 'short-term', 'one-time', 'startup', 'consulting'], {
+    message: 'Nieprawidłowy typ projektu',
+  })
+  project_type?: string;
 
-    @IsOptional()
-    @IsArray()
-    priorities?: string[];
+  @IsOptional()
+  @IsString({ message: 'Zaangażowanie czasowe musi być tekstem' })
+  @IsIn(
+    ['full-time', 'part-time', 'project-based', 'consultations', 'flexible'],
+    {
+      message: 'Nieprawidłowe zaangażowanie czasowe',
+    },
+  )
+  time_commitment?: string;
 
-    @IsOptional()
-    @IsArray()
-    personality_traits?: string[];
+  @IsOptional()
+  @IsArray({ message: 'Tryby pracy muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy tryb pracy musi być tekstem' })
+  work_modes?: string[];
 
-    @IsOptional()
-    @IsArray()
-    specific_requirements?: string[];
+  @IsOptional()
+  @IsString({ message: 'Zakres budżetowy musi być tekstem' })
+  @IsIn(['up-to-50', '50-100', '100-200', '200-plus', 'negotiable'], {
+    message: 'Nieprawidłowy zakres budżetowy',
+  })
+  budget_range?: string;
 
-    @IsOptional()
-    @IsArray()
-    deal_breakers?: string[];
+  // === DOPASOWANIE I OCZEKIWANIA ===
+  @IsOptional()
+  @IsArray({ message: 'Priorytety muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy priorytet musi być tekstem' })
+  priorities?: string[];
 
-    @IsOptional()
-    @IsString()
-    additional_notes?: string;
+  @IsOptional()
+  @IsArray({ message: 'Cechy osobowości muszą być tablicą' })
+  @IsString({ each: true, message: 'Każda cecha osobowości musi być tekstem' })
+  personality_traits?: string[];
 
-    // === DODATKOWE POLA ===
+  @IsOptional()
+  @IsArray({ message: 'Specyficzne wymagania muszą być tablicą' })
+  @IsString({ each: true, message: 'Każde wymaganie musi być tekstem' })
+  specific_requirements?: string[];
 
-    @IsOptional()
-    @IsBoolean()
-    is_available_as_mentor?: boolean;
+  @IsOptional()
+  @IsArray({ message: 'Deal breakers muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy deal breaker musi być tekstem' })
+  deal_breakers?: string[];
 
-    @IsOptional()
-    @IsBoolean()
-    is_looking_for_partners?: boolean;
+  @IsOptional()
+  @IsString({ message: 'Dodatkowe uwagi muszą być tekstem' })
+  @MaxLength(2000, {
+    message: 'Dodatkowe uwagi nie mogą przekraczać 2000 znaków',
+  })
+  additional_notes?: string;
 
-    @IsOptional()
-    @IsNumber()
-    mentor_rating?: number;
+  // === USTAWIENIA PROFILU ===
+  @IsOptional()
+  @IsString({ message: 'Status dostępności musi być tekstem' })
+  @IsIn(['active', 'busy', 'inactive'], {
+    message: 'Nieprawidłowy status dostępności',
+  })
+  availability_status?: string;
 
-    @IsOptional()
-    @IsNumber()
-    completed_projects?: number;
+  @IsOptional()
+  @IsArray({ message: 'Preferowane narzędzia muszą być tablicą' })
+  @IsString({ each: true, message: 'Każde narzędzie musi być tekstem' })
+  preferred_tools?: string[];
 
-    @IsOptional()
-    @IsString()
-    @IsIn(['active', 'busy', 'inactive'])
-    availability_status?: string;
+  @IsOptional()
+  @IsArray({ message: 'Osiągnięcia muszą być tablicą' })
+  @IsString({ each: true, message: 'Każde osiągnięcie musi być tekstem' })
+  achievements?: string[];
+
+  @IsOptional()
+  @IsArray({ message: 'Dostępne dni muszą być tablicą' })
+  @IsString({ each: true, message: 'Każdy dzień musi być tekstem' })
+  available_days?: string[];
+
+  @IsOptional()
+  @IsString({ message: 'Strefa czasowa musi być tekstem' })
+  @MaxLength(50, { message: 'Strefa czasowa nie może przekraczać 50 znaków' })
+  timezone?: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'Maksymalna liczba projektów musi być liczbą' })
+  max_concurrent_projects?: number;
 }
