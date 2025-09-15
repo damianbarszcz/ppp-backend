@@ -26,7 +26,7 @@ export class User {
   password: string;
 
   @Column({ length: 1 })
-  account_type: string;
+  account_type:  string;
 
   @Column({ default: 0 })
   password_length: number;
